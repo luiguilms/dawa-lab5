@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat con Socket.IO</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .user-image {
+            max-width: 50px;
+            max-height: 50px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .message-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            border: 1px solid #ccc;
+        }
+
+        .message {
+            padding: 5px 10px;
+            border-radius: 10px;
+            max-width: 70%;
+        }
+
+        .message-sender-1 {
+            margin-left: auto;
+            background-color: #DCF8C6;
+        }
+
+        .message-sender-2 {
+            margin-right: auto;
+            background-color: #ECE5DD;
+        }
+
+        .message-center {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .message-list {
+            width: 400px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            height: 500px;
+        }
+
+        input {
+            border: 1px solid #ccc;
+            padding: 5px;
+            outline: none;
+        }
+
+        input[type="text"] {
+            font-size: 16px;
+        }
+
+        input[type="text"] {
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"]:focus {
+            border-color: #000;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    <script>
+        var socket = io();
+        var nombre1 = '';
+        var imagen1 = '';
+        var nombre2 = '';
+        var imagen2 = '';
+
+        function enviarMensaje1() {
+            if (!nombre1) {
+                nombre1 = document.getElementById('nombre1').value;
+            }
+            var mensaje = document.getElementById('mensaje1').value;
+            var imagenInput = document.getElementById('imagen1');
+
+            if (!nombre1 || !mensaje) {
+                alert('Por favor, ingresa tu nombre y mensaje antes de enviar.');
+                return false;
+            }
+
+            if (imagenInput.files.length > 0) {
+                var file = imagenInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    imagen1 = event.target.result; // Almacena la imagen como Base64
+                    var mensajeConDatos = {
+                        nombre: nombre1,
+                        imagen: imagen1,
+                        mensaje: mensaje,
+                        hora: obtenerHoraActual()
+                    };
+                    socket.emit('chat message 1', mensajeConDatos);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Por favor, selecciona una imagen de perfil.');
+                return false;
+            }
+
+            document.getElementById('mensaje1').value = '';
+            // Limpiar el campo de imagen para evitar reenviar la misma imagen
+            imagenInput.value = '';
+
+            return false;
+        }
+
+        function enviarMensaje2() {
+            if (!nombre2) {
+                nombre2 = document.getElementById('nombre2').value;
+            }
+            var mensaje = document.getElementById('mensaje2').value;
+            var imagenInput = document.getElementById('imagen2');
+
+            if (!nombre2 || !mensaje) {
+                alert('Por favor, ingresa tu nombre y mensaje antes de enviar.');
+                return false;
+            }
+
+            if (imagenInput.files.length > 0) {
+                var file = imagenInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    imagen2 = event.target.result; // Almacena la imagen como Base64
+                    var mensajeConDatos = {
+                        nombre: nombre2,
+                        imagen: imagen2,
+                        mensaje: mensaje,
+                        hora: obtenerHoraActual()
+                    };
+                    socket.emit('chat message 2', mensajeConDatos);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Por favor, selecciona una imagen de perfil.');
+                return false;
+            }
+
+            document.getElementById('mensaje2').value = '';
+            // Limpiar el campo de imagen para evitar reenviar la misma imagen
+            imagenInput.value = '';
+
+            return false;
+        }
+
+        socket.on('chat message 1', function (data) {
+            mostrarMensaje(data, 'Chat 1');
+        });
+
+        socket.on('chat message 2', function (data) {
+            mostrarMensaje(data, 'Chat 2');
+        });
+
+        function mostrarMensaje(data, chat) {
+            var listaMensajes = document.getElementById('lista-mensajes');
+            var mensajeContainer = document.createElement('div');
+            mensajeContainer.classList.add('message-container');
+
+            var imagenElement = document.createElement('img');
+            imagenElement.className = 'user-image';
+            imagenElement.src = data.imagen;
+
+            var nombreElement = document.createElement('div');
+            nombreElement.textContent = data.nombre;
+
+            var mensajeElement = document.createElement('div');
+            mensajeElement.classList.add('message');
+            mensajeElement.textContent = data.mensaje;
+
+            var horaElement = document.createElement('div');
+            horaElement.textContent = data.hora;
+
+            mensajeContainer.appendChild(imagenElement);
+            mensajeContainer.appendChild(nombreElement);
+            mensajeContainer.appendChild(mensajeElement);
+            mensajeContainer.appendChild(horaElement);
+
+            if (chat === 'Chat 1') {
+                mensajeContainer.classList.add('message-sender-1');
+                if (!imagen1) {
+                    imagen1 = data.imagen;
+                }
+            } else if (chat === 'Chat 2') {
+                mensajeContainer.classList.add('message-sender-2');
+                mensajeContainer.style.flexDirection = 'row-reverse';
+                if (!imagen2) {
+                    imagen2 = data.imagen;
+                }
+            }
+
+            listaMensajes.appendChild(mensajeContainer);
+        }
+
+
+        function obtenerHoraActual() {
+            var fecha = new Date();
+            var hora = fecha.getHours().toString().padStart(2, '0');
+            var minutos = fecha.getMinutes().toString().padStart(2, '0');
+            return hora + ':' + minutos;
+        }
+    </script>
+
+</head>
+
+<body>
+    <h1>Chat 1</h1>
+    <form onsubmit="return enviarMensaje1()">
+        <input type="text" id="nombre1" placeholder="Tu nombre" autocomplete="off" required style="width: 200px;" />
+        <input type="file" id="imagen1" accept="image/*" />
+        <input type="text" id="mensaje1" placeholder="Escribe un mensaje" autocomplete="off" required
+            style="width: 500px;" />
+        <button>Enviar</button>
+    </form>
+
+    <h1>Chat 2</h1>
+    <form onsubmit="return enviarMensaje2()">
+        <input type="text" id="nombre2" placeholder="Tu nombre" autocomplete="off" required style="width: 200px;" />
+        <input type="file" id="imagen2" accept="image/*" />
+        <input type="text" id="mensaje2" placeholder="Escribe un mensaje" autocomplete="off" required
+            style="width: 500px;" />
+        <button>Enviar</button>
+    </form>
+
+    <div class="message-center">
+        <h1>Mensajes</h1>
+        <div class="message-list" id="lista-mensajes">
+        </div>
+    </div>
+</body>
+
+</html>
